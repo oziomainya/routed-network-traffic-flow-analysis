@@ -192,12 +192,13 @@ at the frame level.
 ## 📁 Repository Structure
 
 ```
-routed-network-traffic-flow/
+routed-network-traffic-flow-analysis/
 ├── index.html                                          ← Full project write-up (live via GitHub Pages)
 ├── README.md                                           ← This file
 ├── routed-network-traffic-flow-analysis.pkt            ← Cisco Packet Tracer project file
 ├── topology.png                                        ← Full topology screenshot
 ├── pings. png                                          ← Cross-LAN pings
+├── runninh-config.txt                                  ← R1 running-config
 └── route-table.png                                     ← R1 show ip route output
   
 ```
