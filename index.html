@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Routed Network Traffic Flow Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+
+<script>
+  const PROJECT = {
+    title:      "Routed Network Traffic Flow Analysis",
+    category:   "networking",
+    status:     "live",
+    author:     "Ozioma Inya",
+    date:       "[July, 2025]",
+    overview:   "A two-LAN simulation built in Cisco Packet Tracer to observe how traffic behaves in an unrouted network versus a routed one. Demonstrates IPv4 addressing, default gateway configuration, and inter-LAN routing using a Cisco router — completed as part of the Cisco Networking Academy Junior Cybersecurity Analyst career path.",
+
+    objectives: [
+      "Build a two-LAN topology in Cisco Packet Tracer with two switches, one router, and four end devices",
+      "Assign static IPv4 addresses and subnet masks to all hosts and router interfaces",
+      "Observe and document why traffic cannot flow between LANs without a configured router",
+      "Configure router interfaces and default gateways to enable inter-LAN routing",
+      "Verify end-to-end connectivity across both LANs using ping and Packet Tracer simulation mode",
+      "Document all device configurations, test results, and lessons learned",
+    ],
+
+    tools: [
+      { name: "Cisco Packet Tracer",           purpose: "Network topology simulation and traffic visualisation" },
+      { name: "Cisco IOS CLI",                 purpose: "Router interface configuration" },
+      { name: "Packet Tracer Simulation Mode", purpose: "Step-by-step packet flow observation" },
+      { name: "ICMP Ping",                     purpose: "End-to-end connectivity verification" },
+    ],
+
+    skills: [
+      "IPv4 Addressing", "Subnetting", "Default Gateway", "Static IP Configuration",
+      "Router Interface Config", "Inter-LAN Routing", "ICMP / Ping",
+      "Cisco IOS CLI", "Network Troubleshooting", "Packet Tracer",
+    ],
+
+    steps: [
+      {
+        title: "Build the Topology",
+        desc:  "Opened Cisco Packet Tracer and placed two 2960 switches (SW1, SW2), one 1941 router (R1), and four generic PCs. Connected PC1 and PC2 to SW1, PC3 and PC4 to SW2, then connected SW1 to R1 Fa0/0 and SW2 to R1 Fa0/1 using straight-through copper cables. This represents a company with two departments on separate network segments.",
+        code:  `Topology Summary:
+  LAN 1 — 192.168.1.0/24
+    PC1  → SW1 Fa0/1   (192.168.1.10 /24)
+    PC2  → SW1 Fa0/2   (192.168.1.20 /24)
+    SW1  → R1  G0/0
+
+  LAN 2 — 192.168.2.0/24
+    PC3  → SW2 Fa0/1   (192.168.2.10 /24)
+    PC4  → SW2 Fa0/2   (192.168.2.20 /24)
+    SW2  → R1  G0/1`,
+      },
+      {
+        title: "Assign IP Addresses to End Devices",
+        desc:  "Configured each PC with a static IPv4 address and subnet mask. At this stage, default gateways were intentionally left blank — to first observe what happens when hosts have no route beyond their local LAN.",
+        code:  `PC1  IP: 192.168.1.10   Mask: 255.255.255.0   GW: (none yet)
+PC2  IP: 192.168.1.20   Mask: 255.255.255.0   GW: (none yet)
+PC3  IP: 192.168.2.10   Mask: 255.255.255.0   GW: (none yet)
+PC4  IP: 192.168.2.20   Mask: 255.255.255.0   GW: (none yet)`,
+      },
+      {
+        title: "Observe Unrouted Traffic",
+        desc:  "Used Packet Tracer simulation mode to send ICMP packets between devices. Pings within the same LAN succeeded. Pings across LANs failed — the packet reached the switch but had nowhere to go. No router interfaces were configured yet, so R1 did not forward anything. This stage demonstrates exactly why a router and default gateway are required.",
+        code:  `C:\\> ping 192.168.1.20   ← PC1 to PC2 (same LAN)
+Reply from 192.168.1.20: bytes=32 time<1ms TTL=128  ✓
+
+C:\\> ping 192.168.2.10   ← PC1 to PC3 (different LAN)
+Request timed out.
+Request timed out.
+Request timed out.
+Request timed out.  ✗`,
+      },
+      {
+        title: "Configure Router Interfaces",
+        desc:  "Accessed R1 via the Cisco IOS CLI. Configured each interface with the gateway IP for its connected LAN, then brought both interfaces up with the no shutdown command. R1 now has a presence on both network segments and can forward packets between them.",
+        code:  `Router> enable
+Router# configure terminal
+Router(config)# hostname R1
+
+R1(config)# interface GigabitEthernet0/0
+R1(config-if)# ip address 192.168.1.1 255.255.255.0
+R1(config-if)# no shutdown
+R1(config-if)# exit
+
+R1(config)# interface GigabitEthernet0/1
+R1(config-if)# ip address 192.168.2.1 255.255.255.0
+R1(config-if)# no shutdown
+R1(config-if)# exit
+
+R1(config)# end
+R1# copy running-config startup-config 
+Destination filename [startup-config]? 
+Building configuration...
+[OK]`,
+      },
+      {
+        title: "Set Default Gateways on All PCs",
+        desc:  "Updated each PC's network settings to include the correct default gateway — the IP address of the router interface on their local LAN. Without this, a host cannot send packets outside its own subnet. PC1 and PC2 point to R1 Fa0/0; PC3 and PC4 point to R1 Fa0/1.",
+        code:  `PC1  IP: 192.168.1.10   Mask: 255.255.255.0   GW: 192.168.1.1
+PC2  IP: 192.168.1.20   Mask: 255.255.255.0   GW: 192.168.1.1
+PC3  IP: 192.168.2.10   Mask: 255.255.255.0   GW: 192.168.2.1
+PC4  IP: 192.168.2.20   Mask: 255.255.255.0   GW: 192.168.2.1`,
+      },
+      {
+        title: "Verify End-to-End Connectivity",
+        desc:  "Ran ICMP ping tests from PC1 to every other host — both within its own LAN and across to LAN 2. All pings succeeded. Switched to simulation mode to observe the packet path step by step: PC1 → SW1 → R1 → SW2 → PC3. The router correctly de-encapsulates the frame, makes a routing decision, and re-encapsulates for the destination LAN.",
+        code:  `C:\\> ping 192.168.1.20   ← PC1 to PC2 (same LAN)    ✓
+C:\\> ping 192.168.2.10   ← PC1 to PC3 (cross-LAN)   ✓
+C:\\> ping 192.168.2.20   ← PC1 to PC4 (cross-LAN)   ✓
+
+R1# show ip route
+C    192.168.1.0/24 is directly connected, FastEthernet0/0
+C    192.168.2.0/24 is directly connected, FastEthernet0/1`,
+      },
+    ],
+
+    results: [
+      { type: "success", text: "Intra-LAN pings (PC1↔PC2 and PC3↔PC4) succeeded before and after router configuration — confirming switch-level connectivity was correct from the start." },
+      { type: "success", text: "Inter-LAN pings failed as expected before router configuration, clearly demonstrating that hosts cannot reach outside their subnet without a gateway." },
+      { type: "success", text: "After configuring R1 interfaces and setting default gateways, all cross-LAN pings succeeded with sub-1ms response times." },
+      { type: "success", text: "Packet Tracer simulation mode confirmed the correct path: PC → Switch → Router → Switch → Destination. R1 routing table showed both directly connected networks." },
+      { type: "warning", text: "Initial attempt had R1 G0/0 configured with the correct IP but left in shutdown state — pings still failed even with the correct gateway set on PCs." },
+      { type: "fix",     text: "Resolved by running no shutdown on both interfaces. Confirmed with show interface GigabitEthernet0/0 — line protocol changed to up." },
+    ],
+
+    lessons: [
+      {
+        title: "The default gateway is not optional",
+        text:  "Without a default gateway, a host drops any packet destined for a different network — it never even reaches the router. Seeing this fail live in simulation mode made the concept click in a way theory alone could not.",
+      },
+      {
+        title: "Cisco interfaces are down by default — no shutdown is always required",
+        text:  "Router interfaces are administratively shut down out of the box. Forgetting no shutdown means the interface is correctly configured but completely inactive. This is a common real-world mistake and one worth documenting clearly.",
+      },
+      {
+        title: "Simulation mode is a powerful troubleshooting tool",
+        text:  "Watching packets step through the topology in Packet Tracer simulation mode made it immediately obvious where traffic was dropping and why. This same mental model — tracing a packet hop by hop — applies directly to real-world troubleshooting.",
+      },
+      {
+        title: "What I would extend next time",
+        text:  "A more complete version would replace static addressing with a DHCP server on R1, introduce a third LAN requiring static routes, and add Wireshark captures to inspect ARP requests and ICMP packets at the frame level.",
+      },
+    ],
+
+    githubLink:    "https://github.com/oziomainya",
+    portfolioLink: "https://oziomainya.github.io",
+    authorLinkedIn:"https://linkedin.com/in/ozioma-inya-a46327304",
+  };
+</script>
+
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050505;--bg-2:#0c0c0c;--bg-card:#0f0f0f;--bg-code:#080808;
+  --green:#00ff41;--green-d:#00b32d;--green-dk:#001f08;
+  --cyan:#00e5ff;--cyan-d:#00a8c0;
+  --amber:#ffd600;--red:#ff4444;--text:#ccffcc;
+  --text-2:#5a8f5a;--text-m:#2a4a2a;
+  --border:rgba(0,255,65,.09);--border-s:rgba(0,255,65,.22);
+  --font:'JetBrains Mono','Courier New',monospace
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.7;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,65,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,65,.02) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);pointer-events:none;z-index:999}
+nav{position:fixed;top:0;width:100%;z-index:100;background:rgba(5,5,5,.97);border-bottom:1px solid var(--border);padding:0 2.5rem;height:56px;display:flex;align-items:center;justify-content:space-between}
+.nav-back{color:var(--text-2);text-decoration:none;font-size:11px;letter-spacing:.1em;transition:color .2s}
+.nav-back::before{content:'← ';color:var(--text-m)}
+.nav-back:hover{color:var(--green)}
+.nav-id{color:var(--text-m);font-size:11px;letter-spacing:.1em}
+main{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:6rem 2.5rem 5rem}
+.proj-header{margin-bottom:4rem;padding-bottom:2.5rem;border-bottom:1px solid var(--border)}
+.proj-meta{display:flex;align-items:center;gap:.65rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.meta-cat{font-size:9px;letter-spacing:.15em;padding:3px 10px;border-radius:2px;background:var(--green-dk);color:var(--green);border:1px solid rgba(0,255,65,.2)}
+.meta-status{font-size:9px;letter-spacing:.12em;display:inline-flex;align-items:center;gap:5px}
+.meta-status::before{content:'';width:6px;height:6px;border-radius:50%;animation:pulse 2s ease-in-out infinite}
+.meta-status.live{color:var(--green)}.meta-status.live::before{background:var(--green)}
+.meta-status.wip{color:var(--cyan)}.meta-status.wip::before{background:var(--cyan)}
+.meta-status.soon{color:var(--amber)}.meta-status.soon::before{background:var(--amber)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.meta-source{font-size:9px;letter-spacing:.08em;padding:3px 10px;border-radius:2px;background:rgba(0,229,255,.05);color:var(--cyan-d);border:1px solid rgba(0,229,255,.15)}
+.meta-date{font-size:10px;color:var(--text-m)}
+.proj-title{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;color:var(--green);letter-spacing:-.02em;margin-bottom:1rem;line-height:1.15}
+.proj-overview{font-size:13px;color:var(--text-2);line-height:2;max-width:640px}
+.proj-actions{display:flex;gap:.75rem;margin-top:2rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem 1.2rem;font-family:var(--font);font-size:11px;letter-spacing:.1em;cursor:pointer;transition:all .18s;text-decoration:none;border-radius:2px}
+.btn-p{background:var(--green-dk);color:var(--green);border:1px solid rgba(0,255,65,.3)}
+.btn-p:hover{background:var(--green);color:#030d06}
+.btn-s{background:transparent;color:var(--text-2);border:1px solid var(--border-s)}
+.btn-s:hover{color:var(--cyan);border-color:rgba(0,229,255,.3)}
+.section{margin-bottom:3.5rem}
+.sh{display:flex;align-items:center;gap:1rem;margin-bottom:1.75rem;color:var(--text-2);font-size:12px;letter-spacing:.1em}
+.sh::before{content:'$';color:var(--green);font-size:14px;font-weight:700}
+.sh::after{content:'';flex:1;height:1px;background:var(--border)}
+.obj-list{display:flex;flex-direction:column;gap:.6rem}
+.obj-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:.85rem 1.1rem;font-size:12px;color:var(--text-2);transition:border-color .2s}
+.obj-item:hover{border-color:var(--border-s)}
+.obj-num{color:var(--text-m);flex-shrink:0;min-width:22px}
+.tools-table{width:100%;border-collapse:collapse;font-size:12px}
+.tools-table th{text-align:left;padding:.6rem 1rem;color:var(--text-m);font-weight:400;font-size:10px;letter-spacing:.1em;border-bottom:1px solid var(--border)}
+.tools-table td{padding:.7rem 1rem;border-bottom:1px solid var(--border);color:var(--text-2)}
+.tools-table tr:last-child td{border-bottom:none}
+.tools-table tr:hover td{color:var(--text)}
+.tool-name{color:var(--green);font-weight:500}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:.4rem}
+.tag{display:inline-block;padding:3px 10px;font-size:10px;border-radius:2px;letter-spacing:.04em;background:rgba(0,255,65,.06);color:var(--green-d);border:1px solid rgba(0,255,65,.14)}
+.topo-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.5rem;overflow-x:auto}
+.topo-diagram{font-size:11px;color:var(--green-d);line-height:2.1;white-space:pre;font-family:var(--font);margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.topo-table{width:100%;border-collapse:collapse;font-size:11px}
+.topo-table th{text-align:left;padding:.5rem .85rem;color:var(--text-m);font-weight:400;font-size:10px;letter-spacing:.1em;border-bottom:1px solid var(--border)}
+.topo-table td{padding:.6rem .85rem;border-bottom:1px solid var(--border);color:var(--text-2)}
+.topo-table tr:last-child td{border-bottom:none}
+.topo-hl{color:var(--green) !important;font-weight:500}
+.topo-ip{color:var(--cyan-d) !important}
+.steps-list{display:flex;flex-direction:column;gap:1.25rem}
+.step{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;overflow:hidden;transition:border-color .2s}
+.step:hover{border-color:var(--border-s)}
+.step-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem}
+.step-n{font-size:9px;color:var(--text-m);letter-spacing:.15em}
+.step-title{font-size:12px;font-weight:700;color:var(--cyan)}
+.step-body{padding:1rem 1.25rem}
+.step-desc{font-size:12px;color:var(--text-2);line-height:1.9;margin-bottom:.75rem}
+.step-code{background:var(--bg-code);border:1px solid rgba(0,255,65,.07);border-radius:3px;padding:1rem 1.25rem;font-size:11px;color:var(--green-d);overflow-x:auto;white-space:pre;line-height:1.8}
+.results-list{display:flex;flex-direction:column;gap:.6rem}
+.result{display:flex;align-items:flex-start;gap:.85rem;padding:.9rem 1.1rem;border-radius:3px;border:1px solid;font-size:12px;line-height:1.8}
+.result.success{background:rgba(0,255,65,.04);border-color:rgba(0,255,65,.12);color:var(--text-2)}
+.result.success .ri{color:var(--green);flex-shrink:0}
+.result.warning{background:rgba(255,214,0,.04);border-color:rgba(255,214,0,.12);color:var(--text-2)}
+.result.warning .ri{color:var(--amber);flex-shrink:0}
+.result.fix{background:rgba(0,229,255,.04);border-color:rgba(0,229,255,.12);color:var(--text-2)}
+.result.fix .ri{color:var(--cyan);flex-shrink:0}
+.lessons-list{display:flex;flex-direction:column;gap:1rem}
+.lesson{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.25rem;transition:border-color .2s}
+.lesson:hover{border-color:var(--border-s)}
+.lesson-n{font-size:9px;color:var(--text-m);letter-spacing:.15em;margin-bottom:.35rem}
+.lesson-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:.4rem}
+.lesson-text{font-size:12px;color:var(--text-2);line-height:1.9}
+.screenshot-placeholder{background:var(--bg-card);border:1px dashed rgba(0,255,65,.15);border-radius:4px;padding:2.5rem;text-align:center;font-size:11px;color:var(--text-m);letter-spacing:.05em}
+footer{position:relative;z-index:1;text-align:center;padding:2rem;border-top:1px solid var(--border);color:var(--text-m);font-size:10px;letter-spacing:.1em}
+@media(max-width:620px){main{padding:5rem 1.25rem 3rem}nav{padding:0 1.25rem}.proj-title{font-size:1.7rem}.topo-diagram{font-size:9px}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a id="nav-back" href="#" class="nav-back">Back to Portfolio</a>
+  <span class="nav-id" id="nav-id"></span>
+</nav>
+
+<main>
+  <header class="proj-header" id="proj-header"></header>
+
+  <div class="section">
+    <div class="sh">cat objectives.txt</div>
+    <div class="obj-list" id="obj-list"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat tools.txt</div>
+    <table class="tools-table">
+      <thead><tr><th>TOOL / TECHNOLOGY</th><th>PURPOSE</th></tr></thead>
+      <tbody id="tools-body"></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat skills.txt</div>
+    <div class="tags-wrap" id="tags-wrap"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat topology.txt</div>
+    <div class="topo-wrap">
+      <pre class="topo-diagram">  LAN 1 — 192.168.1.0/24                              LAN 2 — 192.168.2.0/24
+
+  [PC1: 192.168.1.10] ──┐                                                    ┌── [PC3: 192.168.2.10]
+                          ├──[SW1]──[G0/0: .1.1]─[R1]─[G0/1: .2.1]──[SW2]──┤                 
+  [PC2: 192.168.1.20] ──┘                                                    └── [PC4: 192.168.2.20] </pre>
+      <table class="topo-table">
+        <thead><tr><th>DEVICE</th><th>INTERFACE</th><th>IP ADDRESS</th><th>SUBNET MASK</th><th>DEFAULT GATEWAY</th></tr></thead>
+        <tbody>
+          <tr><td class="topo-hl">PC1</td><td>NIC</td><td class="topo-ip">192.168.1.10</td><td>255.255.255.0</td><td class="topo-ip">192.168.1.1</td></tr>
+          <tr><td class="topo-hl">PC2</td><td>NIC</td><td class="topo-ip">192.168.1.20</td><td>255.255.255.0</td><td class="topo-ip">192.168.1.1</td></tr>
+          <tr><td class="topo-hl">PC3</td><td>NIC</td><td class="topo-ip">192.168.2.10</td><td>255.255.255.0</td><td class="topo-ip">192.168.2.1</td></tr>
+          <tr><td class="topo-hl">PC4</td><td>NIC</td><td class="topo-ip">192.168.2.20</td><td>255.255.255.0</td><td class="topo-ip">192.168.2.1</td></tr>
+          <tr><td class="topo-hl">R1</td><td>G0/0</td><td class="topo-ip">192.168.1.1</td><td>255.255.255.0</td><td>—</td></tr>
+          <tr><td class="topo-hl">R1</td><td>G0/1</td><td class="topo-ip">192.168.2.1</td><td>255.255.255.0</td><td>—</td></tr>
+          <tr><td class="topo-hl">SW1</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td class="topo-hl">SW2</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat methodology.txt</div>
+    <div class="steps-list" id="steps-list"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat results.txt</div>
+    <div class="results-list" id="results-list"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">ls ./evidence/</div>
+    <img src="topology.png" 
+     style="width:100%;border-radius:4px;border:1px solid rgba(0,255,65,.1);margin-bottom:1rem;">
+
+<img src="pings.png" 
+     style="width:100%;border-radius:4px;border:1px solid rgba(0,255,65,.1);margin-bottom:1rem;">
+
+<img src="route-table.png" 
+     style="width:100%;border-radius:4px;border:1px solid rgba(0,255,65,.1);margin-bottom:1rem;">
+  </div>
+
+  <div class="section">
+    <div class="sh">cat lessons_learned.txt</div>
+    <div class="lessons-list" id="lessons-list"></div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<script>
+const sl = { soon:'COMING SOON', wip:'IN PROGRESS', live:'LIVE' };
+const ri = { success:'✓', warning:'⚠', fix:'✦', fail:'✗' };
+
+if(PROJECT.portfolioLink) document.getElementById('nav-back').href = PROJECT.portfolioLink;
+document.getElementById('nav-id').textContent = 'ROUTED NETWORK TRAFFIC FLOW ANALYSIS';
+
+const gh  = PROJECT.githubLink    ? `<a href="${PROJECT.githubLink}" target="_blank" class="btn btn-p">↗ View on GitHub</a>` : '';
+const pfl = PROJECT.portfolioLink ? `<a href="${PROJECT.portfolioLink}" class="btn btn-s">← Portfolio</a>` : '';
+document.getElementById('proj-header').innerHTML = `
+  <div class="proj-meta">
+    <span class="meta-cat">NETWORKING</span>
+    <span class="meta-status ${PROJECT.status}">${sl[PROJECT.status]||PROJECT.status.toUpperCase()}</span>
+    <span class="meta-source">CISCO NETWORKING BASICS · JUNIOR CYBERSECURITY ANALYST PATH</span>
+    <span class="meta-date">${PROJECT.date} · by ${PROJECT.author}</span>
+  </div>
+  <h1 class="proj-title">${PROJECT.title}</h1>
+  <p class="proj-overview">${PROJECT.overview}</p>
+  ${(gh||pfl)?`<div class="proj-actions">${gh}${pfl}</div>`:''}`;
+
+const ol = document.getElementById('obj-list');
+PROJECT.objectives.forEach((o,i) => {
+  ol.innerHTML += `<div class="obj-item"><span class="obj-num">${String(i+1).padStart(2,'0')}.</span><span>${o}</span></div>`;
+});
+
+const tb = document.getElementById('tools-body');
+PROJECT.tools.forEach(t => {
+  tb.innerHTML += `<tr><td class="tool-name">${t.name}</td><td>${t.purpose}</td></tr>`;
+});
+
+const tw = document.getElementById('tags-wrap');
+PROJECT.skills.forEach(s => { tw.innerHTML += `<span class="tag">${s}</span>`; });
+
+const stl = document.getElementById('steps-list');
+PROJECT.steps.forEach((s,i) => {
+  const cb = s.code ? `<pre class="step-code">${s.code}</pre>` : '';
+  stl.innerHTML += `
+    <div class="step">
+      <div class="step-header">
+        <span class="step-n">STEP ${String(i+1).padStart(2,'0')}</span>
+        <span class="step-title">${s.title}</span>
+      </div>
+      <div class="step-body"><div class="step-desc">${s.desc}</div>${cb}</div>
+    </div>`;
+});
+
+const rl = document.getElementById('results-list');
+PROJECT.results.forEach(r => {
+  rl.innerHTML += `<div class="result ${r.type}"><span class="ri">${ri[r.type]||'·'}</span><span>${r.text}</span></div>`;
+});
+
+const ll = document.getElementById('lessons-list');
+PROJECT.lessons.forEach((l,i) => {
+  ll.innerHTML += `
+    <div class="lesson">
+      <div class="lesson-n">LESSON ${String(i+1).padStart(2,'0')}</div>
+      <div class="lesson-title">${l.title}</div>
+      <div class="lesson-text">${l.text}</div>
+    </div>`;
+});
+
+const lnk = PROJECT.authorLinkedIn
+  ? `<a href="${PROJECT.authorLinkedIn}" style="color:var(--green-d);text-decoration:none">${PROJECT.author}</a>`
+  : PROJECT.author;
+document.getElementById('footer').innerHTML =
+  `<p>${lnk} &nbsp;·&nbsp; NETWORKING PROJECT &nbsp;·&nbsp; CISCO NETWORKING BASICS &nbsp;·&nbsp; <span style="color:var(--green)">LIVE</span></p>`;
+</script>
+</body>
+</html>
