@@ -168,21 +168,25 @@ C    192.168.2.0/24 is directly connected, FastEthernet0/1
 ## 📚 Lessons Learned
 
 **1. The default gateway is not optional**
+
 Without a default gateway, a host drops any packet destined for a different
 network before it ever reaches the router. Seeing this fail live made the
 concept click in a way theory alone could not.
 
 **2. Cisco interfaces are down by default**
+
 Router interfaces are administratively shut down out of the box. Forgetting
 `no shutdown` means the interface is correctly configured but completely
 inactive — a common real-world mistake.
 
 **3. Simulation mode is a powerful troubleshooting tool**
+
 Watching packets step through the topology hop by hop made it immediately
 obvious where traffic was dropping and why. This mental model applies directly
 to real-world troubleshooting.
 
 **4. What I would extend next time**
+
 Replace static addressing with a DHCP server on R1, add a third LAN requiring
 static routes, and layer Wireshark captures on top to inspect ARP and ICMP
 at the frame level.
