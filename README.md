@@ -1,9 +1,13 @@
 # Routed Network Traffic Flow Analysis
 
 > **Category:** Networking
+> 
 > **Status:** Live
+> 
 > **Course:** Cisco Networking Basics · Junior Cybersecurity Analyst Career Path
+> 
 > **Author:** Ozioma Inya         <!-- ✏️ Replace with your name -->
+> 
 > **Date:** July, 2025              <!-- ✏️ Replace with completion date -->
 
 ---
